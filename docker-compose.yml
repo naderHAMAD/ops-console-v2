@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+
+  # ---------- Base de données ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: ops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ops_console
+      POSTGRES_USER: ops_user
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops_user -d ops_console"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: ops-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@steg.tn
+      PGADMIN_DEFAULT_PASSWORD: changeme
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  # ---------- File de messages pour les jobs longs (update/VM) ----------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ops-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ops_user
+      RABBITMQ_DEFAULT_PASS: changeme
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # UI management (http://localhost:15672)
+
+  # ---------- Backend Spring Boot ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ops-backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ops_console
+      SPRING_DATASOURCE_USERNAME: ops_user
+      DB_PASSWORD: changeme
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ops_user
+      SPRING_RABBITMQ_PASSWORD: changeme
+      JWT_SECRET: dev-only-secret-a-remplacer-en-production-1234567890
+      AWX_BASE_URL: http://awx:8052
+      AWX_TOKEN: ""
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+  # ---------- Frontend Angular ----------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ops-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+# ------------------------------------------------------------------
+# NOTE — AWX (Ansible Automation Platform) n'est volontairement pas
+# inclus ici : son installation officielle passe par l'AWX Operator
+# (Kubernetes) ou le dépôt "awx-on-docker" séparé, car il embarque
+# lui-même Postgres/Redis/Task/Web en plusieurs conteneurs.
+# Voir : https://github.com/ansible/awx/blob/devel/INSTALL.md
+# Une fois AWX lancé, renseigne juste AWX_BASE_URL et AWX_TOKEN
+# ci-dessus (ou en variables d'environnement du service backend).
+# ------------------------------------------------------------------

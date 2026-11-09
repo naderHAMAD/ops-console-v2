@@ -1,0 +1,48 @@
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand-mark">
+      <div class="brand-dot"></div>
+      <div class="brand-name">OPS · JBOSS CONSOLE</div>
+    </div>
+
+    <ng-container *ngIf="!otpMode()">
+      <h1 class="login-title">Connexion</h1>
+      <p class="login-sub">Accès réservé au personnel autorisé — STEG Data Centre</p>
+
+      <form [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+        <div class="field">
+          <label class="field-label">Email professionnel</label>
+          <input type="text" formControlName="email" />
+        </div>
+        <div class="field">
+          <label class="field-label">Mot de passe</label>
+          <input type="password" formControlName="password" />
+        </div>
+
+        <p class="error-text" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="btn-primary" type="submit" [disabled]="loginForm.invalid || loading()">
+          {{ loading() ? 'Connexion...' : 'Se connecter' }}
+        </button>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="otpMode()">
+      <h1 class="login-title">Vérification en deux étapes</h1>
+      <p class="login-sub">Entrez le code généré par votre application d'authentification</p>
+
+      <form [formGroup]="otpForm" (ngSubmit)="submitOtp()">
+        <div class="field">
+          <label class="field-label">Code à 6 chiffres</label>
+          <input type="text" formControlName="code" maxlength="6" />
+        </div>
+
+        <p class="error-text" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+        <button class="btn-primary" type="submit" [disabled]="otpForm.invalid || loading()">
+          {{ loading() ? 'Vérification...' : 'Valider' }}
+        </button>
+      </form>
+    </ng-container>
+  </div>
+</div>

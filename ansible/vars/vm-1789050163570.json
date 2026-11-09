@@ -1,0 +1,14 @@
+{
+  "name": "dd",
+  "environment": "test",
+  "regionId": "6127dfd5-133c-4b35-8e37-7fa0514973ee",
+  "cpu": 2,
+  "ramGb": 2,
+  "diskGb": 50,
+  "diskType": "hdd",
+  "template": "ubuntu-22.04-lts",
+  "network": "dd",
+  "backupEnabled": true,
+  "description": "dd",
+  "region": "SUD"
+}

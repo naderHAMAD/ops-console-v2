@@ -1,0 +1,59 @@
+---
+# Playbook de test simple — à choisir via le bouton "Choisir un playbook"
+# de l'écran Création VM. Ne crée pas de vraie VM : il sert uniquement à
+# valider que le pipeline complet fonctionne (App -> Backend -> WSL -> Ansible).
+#
+# Variables attendues (envoyées automatiquement par l'app depuis le JSON généré) :
+# vm_name, vm_environment, region, cpu, ram_gb, disk_gb, disk_type, template, network
+
+- name: Test simple de fonctionnement Ansible
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  tasks:
+
+    - name: Afficher les variables reçues depuis l'application
+      ansible.builtin.debug:
+        msg:
+          - "Nom de la VM     : {{ vm_name | default('non fourni') }}"
+          - "Environnement    : {{ vm_environment | default('non fourni') }}"
+          - "Région           : {{ region | default('non fournie') }}"
+          - "CPU              : {{ cpu | default('non fourni') }}"
+          - "RAM (Go)         : {{ ram_gb | default('non fourni') }}"
+          - "Disque (Go)      : {{ disk_gb | default('non fourni') }}"
+          - "Type de disque   : {{ disk_type | default('non fourni') }}"
+          - "Réseau           : {{ network | default('non fourni') }}"
+
+    - name: Créer un dossier de preuve d'exécution
+      ansible.builtin.file:
+        path: "/tmp/ansible-test-{{ vm_name | default('sans-nom') }}"
+        state: directory
+
+    - name: Écrire un fichier de résultat (preuve concrète et vérifiable)
+      ansible.builtin.copy:
+        dest: "/tmp/ansible-test-{{ vm_name | default('sans-nom') }}/resultat.txt"
+        content: |
+          ==========================================
+          TEST ANSIBLE REUSSI
+          ==========================================
+          Execute le    : {{ ansible_date_time.iso8601 }}
+          Hote executant: {{ ansible_hostname }}
+
+          --- Donnees recues du formulaire ---
+          Nom VM        : {{ vm_name | default('non fourni') }}
+          Environnement : {{ vm_environment | default('non fourni') }}
+          Region        : {{ region | default('non fournie') }}
+          CPU           : {{ cpu | default('non fourni') }}
+          RAM           : {{ ram_gb | default('non fourni') }} Go
+          Disque        : {{ disk_gb | default('non fourni') }} Go ({{ disk_type | default('n/a') }})
+          Reseau        : {{ network | default('non fourni') }}
+          ==========================================
+
+    - name: Simuler une petite pause (comme un vrai provisioning)
+      ansible.builtin.pause:
+        seconds: 3
+
+    - name: Confirmation finale
+      ansible.builtin.debug:
+        msg: "Playbook execute avec succes pour la VM {{ vm_name | default('sans-nom') }}. Resultat dans /tmp/ansible-test-{{ vm_name | default('sans-nom') }}/resultat.txt"

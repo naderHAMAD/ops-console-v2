@@ -1,0 +1,18 @@
+---
+- name: stop jboss
+  ansible.builtin.systemd:
+    name: "{{ jboss_service_name }}"
+    state: stopped
+  listen: "stop jboss"
+
+- name: start jboss
+  ansible.builtin.systemd:
+    name: "{{ jboss_service_name }}"
+    state: started
+  listen: "start jboss"
+
+- name: restart jboss
+  ansible.builtin.systemd:
+    name: "{{ jboss_service_name }}"
+    state: restarted
+  listen: "restart jboss"

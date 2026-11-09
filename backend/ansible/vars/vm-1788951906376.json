@@ -1,0 +1,14 @@
+{
+  "name": "8",
+  "environment": "prod",
+  "regionId": "6127dfd5-133c-4b35-8e37-7fa0514973ee",
+  "cpu": 4,
+  "ramGb": 8,
+  "diskGb": 100,
+  "diskType": "ssd",
+  "template": "rhel-9",
+  "network": "",
+  "backupEnabled": true,
+  "description": "8",
+  "region": "SUD"
+}

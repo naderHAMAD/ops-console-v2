@@ -1,0 +1,13 @@
+---
+# Fichier à chiffrer avec : ansible-vault encrypt group_vars/vault.yml
+# Puis référencé automatiquement par group_vars/all.yml (mêmes noms de variables visibles)
+
+vault_artifact_repo_user: "svc-jboss-deploy"
+vault_artifact_repo_password: "CHANGER_MOI"
+
+vault_ssh_become_password: "CHANGER_MOI"
+
+# Credentials hyperviseur pour la création de VM
+vault_proxmox_api_user: "automation@pve"
+vault_proxmox_api_password: "CHANGER_MOI"
+vault_proxmox_api_host: "https://proxmox-sud.steg.tn:8006"

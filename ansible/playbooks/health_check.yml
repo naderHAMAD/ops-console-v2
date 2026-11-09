@@ -1,0 +1,31 @@
+---
+# Playbook léger, sans impact, exécutable en cron via AWX (ex: toutes les 5 min)
+# pour rafraîchir le statut/version affichés dans le dashboard.
+# Le backend peut lire les résultats via le callback AWX ou un fact_cache partagé.
+
+- name: Vérification de santé des serveurs JBoss
+  hosts: all
+  become: false
+  gather_facts: false
+
+  tasks:
+    - name: Interroger le endpoint de santé JBoss
+      ansible.builtin.uri:
+        url: "{{ jboss_health_endpoint }}"
+        status_code: 200
+        timeout: 5
+      register: health
+      failed_when: false
+
+    - name: Relever la version installée
+      ansible.builtin.command: "cat {{ jboss_home }}/version.txt"
+      register: version
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher un résumé consolidé (récupérable par AWX)
+      ansible.builtin.debug:
+        msg:
+          hostname: "{{ inventory_hostname }}"
+          status: "{{ 'up' if health.status | default(0) == 200 else 'down' }}"
+          version: "{{ version.stdout | default('inconnue') }}"

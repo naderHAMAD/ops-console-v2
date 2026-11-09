@@ -1,0 +1,4 @@
+---
+# Valeurs par defaut du role jboss_update.
+# target_version est fournie par l'application (extra_vars) : ne pas la redefinir ici.
+jboss_artifact_name: "jboss-eap-{{ target_version }}.zip"

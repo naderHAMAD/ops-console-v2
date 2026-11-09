@@ -1,0 +1,114 @@
+<div style="display:flex;gap:8px;margin-bottom:24px;">
+  <div *ngFor="let s of [1,2,3,4,5]"
+       style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--line);font-size:12px;"
+       [style.color]="s === step() ? 'var(--cyan)' : (s < step() ? 'var(--text)' : 'var(--muted)')"
+       [style.borderColor]="s === step() ? 'var(--cyan)' : 'var(--line)'"
+       [style.background]="s === step() ? 'var(--cyan-dim)' : 'transparent'">
+    {{ s }} · {{ s === 1 ? 'Identité' : s === 2 ? 'Région' : s === 3 ? 'Ressources' : s === 4 ? 'Réseau & options' : 'Confirmation' }}
+  </div>
+</div>
+
+<div class="panel" style="padding:24px;">
+
+  <ng-container *ngIf="step() === 1">
+    <label class="field-label">Nom de la VM</label>
+    <input type="text" [(ngModel)]="form.name" [ngModelOptions]="{standalone:true}" style="margin-bottom:16px;">
+    <label class="field-label">Environnement</label>
+    <select [(ngModel)]="form.environment" [ngModelOptions]="{standalone:true}" style="margin-bottom:16px;">
+      <option value="prod">Production</option>
+      <option value="preprod">Pré-production</option>
+      <option value="test">Test</option>
+    </select>
+    <label class="field-label">Description</label>
+    <input type="text" [(ngModel)]="form.description" [ngModelOptions]="{standalone:true}" placeholder="Usage prévu de cette VM">
+  </ng-container>
+
+  <ng-container *ngIf="step() === 2">
+    <label class="field-label">Région cible</label>
+    <select [(ngModel)]="form.regionId" [ngModelOptions]="{standalone:true}">
+      <option value="" disabled>Choisir une région</option>
+      <option *ngFor="let r of regions()" [value]="r.id">{{ r.name }}</option>
+    </select>
+  </ng-container>
+
+  <ng-container *ngIf="step() === 3">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <label class="field-label">vCPU</label>
+        <input type="number" [(ngModel)]="form.cpu" [ngModelOptions]="{standalone:true}" min="1" max="32">
+      </div>
+      <div>
+        <label class="field-label">RAM (Go)</label>
+        <input type="number" [(ngModel)]="form.ramGb" [ngModelOptions]="{standalone:true}" min="1" max="256">
+      </div>
+      <div>
+        <label class="field-label">Disque (Go)</label>
+        <input type="number" [(ngModel)]="form.diskGb" [ngModelOptions]="{standalone:true}" min="10" max="2000">
+      </div>
+      <div>
+        <label class="field-label">Type de disque</label>
+        <select [(ngModel)]="form.diskType" [ngModelOptions]="{standalone:true}">
+          <option value="ssd">SSD</option>
+          <option value="hdd">HDD</option>
+        </select>
+      </div>
+      <div style="grid-column: span 2;">
+        <label class="field-label">Template OS</label>
+        <select [(ngModel)]="form.template" [ngModelOptions]="{standalone:true}">
+          <option value="ubuntu-22.04-lts">Ubuntu 22.04 LTS</option>
+          <option value="rhel-9">RHEL 9</option>
+          <option value="centos-stream-9">CentOS Stream 9</option>
+        </select>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="step() === 4">
+    <label class="field-label">Réseau / VLAN</label>
+    <input type="text" [(ngModel)]="form.network" [ngModelOptions]="{standalone:true}" placeholder="ex: VLAN-SUD-PROD" style="margin-bottom:16px;">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);">
+      <input type="checkbox" [(ngModel)]="form.backupEnabled" [ngModelOptions]="{standalone:true}">
+      Activer les sauvegardes automatiques
+    </label>
+  </ng-container>
+
+  <ng-container *ngIf="step() === 5">
+    <p style="color:var(--muted);font-size:13px;">Résumé de la spécification :</p>
+    <table>
+      <tr><td>Nom</td><td class="mono">{{ form.name }}</td></tr>
+      <tr><td>Environnement</td><td>{{ form.environment }}</td></tr>
+      <tr><td>Région</td><td>{{ regionName() }}</td></tr>
+      <tr><td>Ressources</td><td class="mono">{{ form.cpu }} vCPU · {{ form.ramGb }} Go RAM · {{ form.diskGb }} Go {{ form.diskType }}</td></tr>
+      <tr><td>Réseau</td><td>{{ form.network || '—' }}</td></tr>
+    </table>
+
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;">
+
+      <div>
+        <button class="btn-mini" (click)="generateJson()">📄 1. Générer le fichier JSON</button>
+        <span *ngIf="jsonGenerated()" style="color:var(--cyan);font-size:12px;margin-left:10px;">✓ JSON prêt</span>
+      </div>
+
+      <div>
+        <label class="btn-mini" style="cursor:pointer;display:inline-block;">
+          📁 2. Choisir un playbook (.yml)
+          <input type="file" accept=".yml,.yaml" style="display:none;" (change)="onPlaybookSelected($event)">
+        </label>
+        <span *ngIf="playbookFileName()" style="color:var(--cyan);font-size:12px;margin-left:10px;">✓ {{ playbookFileName() }}</span>
+      </div>
+
+      <div>
+        <button class="btn-cyan" [disabled]="submitting()" (click)="deploy()">
+          🚀 {{ submitting() ? 'Exécution en cours...' : '3. Déployer (exécute le playbook)' }}
+        </button>
+      </div>
+    </div>
+
+    <pre *ngIf="ansibleOutput()" class="mono" style="background:var(--panel-2);padding:12px;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:250px;overflow-y:auto;margin-top:16px;">{{ ansibleOutput() }}</pre>
+  </ng-container>
+
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:26px;">
+    <button class="btn-mini" *ngIf="step() > 1" (click)="previous()">Précédent</button>
+    <button class="btn-cyan" *ngIf="step() < 5" (click)="next()">Étape suivante</button>
+  </div>
+</div>

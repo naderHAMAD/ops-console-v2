@@ -1,0 +1,25 @@
+---
+# Playbook déclenché par le backend via AWX (job_template "update_jboss").
+# extra_vars attendues : target_hostname (un seul serveur par exécution), target_version.
+#
+# Le backend (UpdateJobConsumer) lance ce playbook une fois par serveur sélectionné,
+# ce qui permet un suivi et un rollback indépendants par machine.
+
+- name: Mise à jour JBoss avec rollback automatique
+  hosts: "{{ target_hostname | default('all') }}"
+  become: true
+  gather_facts: true
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all.yml"
+    - "{{ playbook_dir }}/../group_vars/vault.yml"
+
+  pre_tasks:
+    - name: Vérifier que target_hostname correspond bien à un hôte de l'inventaire
+      ansible.builtin.assert:
+        that:
+          - target_hostname is defined
+          - target_version is defined
+        fail_msg: "target_hostname et target_version doivent être fournis en extra_vars"
+
+  roles:
+    - jboss_update

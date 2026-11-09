@@ -1,0 +1,161 @@
+---
+# Role jboss_update (version corrigee)
+# Sequence : sauvegarde -> arret -> telechargement -> extraction -> deploiement
+#            -> demarrage -> health check -> rollback automatique si echec.
+#
+# Prerequis sur le serveur cible : tar, unzip, python3, service systemd JBoss.
+
+- name: Creer le dossier de backup s'il n'existe pas
+  ansible.builtin.file:
+    path: "{{ backup_root }}/{{ inventory_hostname }}"
+    state: directory
+    owner: "{{ jboss_instance_user }}"
+    mode: "0750"
+
+- name: Relever la version JBoss actuellement installee
+  ansible.builtin.command: "cat {{ jboss_home }}/version.txt"
+  register: current_version
+  changed_when: false
+  failed_when: false
+
+- name: Definir un horodatage unique pour ce deploiement
+  ansible.builtin.set_fact:
+    backup_timestamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
+    extract_dir: "/tmp/jboss-extract-{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
+
+- name: Mise a jour avec rollback automatique
+  block:
+
+    - name: Sauvegarder l'installation JBoss actuelle (tar)
+      ansible.builtin.command:
+        cmd: "tar -czf {{ backup_root }}/{{ inventory_hostname }}/backup-{{ backup_timestamp }}.tar.gz -C {{ jboss_home }} ."
+
+    - name: Arreter le service JBoss
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: stopped
+
+    - name: Telecharger le nouvel artefact JBoss
+      ansible.builtin.get_url:
+        url: "{{ artifact_repository_url }}/{{ jboss_artifact_name }}"
+        dest: "/tmp/{{ jboss_artifact_name }}"
+        url_username: "{{ vault_artifact_repo_user }}"
+        url_password: "{{ vault_artifact_repo_password }}"
+        mode: "0640"
+        force: true
+
+    - name: Creer un dossier d'extraction temporaire
+      ansible.builtin.file:
+        path: "{{ extract_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Decompresser l'artefact dans le dossier temporaire
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ jboss_artifact_name }}"
+        dest: "{{ extract_dir }}"
+        remote_src: true
+
+    - name: Trouver le dossier racine contenu dans l'archive
+      ansible.builtin.find:
+        paths: "{{ extract_dir }}"
+        file_type: directory
+        recurse: false
+      register: extracted
+
+    - name: Verifier que l'archive contient un seul dossier racine
+      ansible.builtin.assert:
+        that: extracted.files | length == 1
+        fail_msg: "Archive invalide : un seul dossier racine est attendu"
+
+    - name: Deployer le contenu de l'archive dans jboss_home
+      ansible.builtin.copy:
+        src: "{{ extracted.files[0].path }}/"
+        dest: "{{ jboss_home }}/"
+        remote_src: true
+        owner: "{{ jboss_instance_user }}"
+
+    - name: Enregistrer la nouvelle version installee
+      ansible.builtin.copy:
+        content: "{{ target_version }}"
+        dest: "{{ jboss_home }}/version.txt"
+        owner: "{{ jboss_instance_user }}"
+
+    - name: Demarrer le service JBoss avec la nouvelle version
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: started
+
+    - name: Attendre que le endpoint de sante JBoss reponde
+      ansible.builtin.uri:
+        url: "{{ jboss_health_endpoint }}"
+        status_code: 200
+        timeout: 5
+      register: health_result
+      retries: "{{ health_check_retries }}"
+      delay: "{{ health_check_delay }}"
+      until: health_result.status == 200
+
+    - name: Mise a jour reussie
+      ansible.builtin.debug:
+        msg: "UPDATE_OK : {{ inventory_hostname }} est passe de {{ current_version.stdout | default('inconnue') }} a {{ target_version }}"
+
+  rescue:
+
+    - name: "ROLLBACK - echec detecte, restauration de la sauvegarde"
+      ansible.builtin.debug:
+        msg: "Echec sur {{ inventory_hostname }}, declenchement du rollback"
+
+    - name: Arreter le service avant restauration
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: stopped
+      failed_when: false
+
+    - name: Vider jboss_home
+      ansible.builtin.file:
+        path: "{{ jboss_home }}"
+        state: absent
+
+    - name: Recreer jboss_home
+      ansible.builtin.file:
+        path: "{{ jboss_home }}"
+        state: directory
+        owner: "{{ jboss_instance_user }}"
+
+    - name: Restaurer la sauvegarde precedente
+      ansible.builtin.unarchive:
+        src: "{{ backup_root }}/{{ inventory_hostname }}/backup-{{ backup_timestamp }}.tar.gz"
+        dest: "{{ jboss_home }}"
+        remote_src: true
+        owner: "{{ jboss_instance_user }}"
+
+    - name: Redemarrer le service avec la version restauree
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: started
+
+    - name: Verifier que le service restaure repond
+      ansible.builtin.uri:
+        url: "{{ jboss_health_endpoint }}"
+        status_code: 200
+        timeout: 5
+      register: rollback_health
+      retries: "{{ health_check_retries }}"
+      delay: "{{ health_check_delay }}"
+      until: rollback_health.status == 200
+
+    - name: Faire echouer le job (visible par l'application)
+      ansible.builtin.fail:
+        msg: "[ROLLBACK_OK] Mise a jour vers {{ target_version }} echouee sur {{ inventory_hostname }}. Rollback effectue, version precedente restauree ({{ current_version.stdout | default('inconnue') }})."
+
+  always:
+
+    - name: Nettoyer les fichiers temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ extract_dir }}"
+        - "/tmp/{{ jboss_artifact_name }}"
+      failed_when: false

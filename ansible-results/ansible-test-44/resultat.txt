@@ -1,0 +1,15 @@
+==========================================
+TEST ANSIBLE REUSSI
+==========================================
+Execute le    : 2026-09-16T14:45:41Z
+Hote executant: DESKTOP-7PSNNVM
+
+--- Donnees recues du formulaire ---
+Nom VM        : 44
+Environnement : preprod
+Region        : NORD
+CPU           : 4
+RAM           : 8 Go
+Disque        : 100 Go (hdd)
+Reseau        : 44
+==========================================

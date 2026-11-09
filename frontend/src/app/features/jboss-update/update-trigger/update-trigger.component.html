@@ -1,0 +1,59 @@
+<div style="display:grid; grid-template-columns: 340px 1fr; gap:20px;">
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Serveurs cibles</h3>
+      <span class="mono" style="color:var(--muted);font-size:12px;">{{ selectedIds().size }} sélectionné(s)</span>
+    </div>
+
+    <div *ngFor="let server of servers()"
+         style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer;"
+         (click)="toggleSelection(server.id)">
+      <input type="checkbox" [checked]="isSelected(server.id)" (click)="$event.stopPropagation()" (change)="toggleSelection(server.id)">
+      <div>
+        <div class="mono">{{ server.hostname }}</div>
+        <div style="color:var(--muted);font-size:11px;">{{ server.jbossVersion }} · {{ server.regionName }}</div>
+      </div>
+    </div>
+
+    <div style="padding:14px;">
+      <label class="field-label">Version cible</label>
+      <input type="text" [(ngModel)]="targetVersion" [ngModelOptions]="{standalone: true}">
+      <p style="color:var(--muted);font-size:11px;margin-top:6px;">
+        Tape une version inexistante (ex: 9.9.9-FAIL) pour forcer un échec et tester le rollback.
+      </p>
+    </div>
+    <div style="padding:0 14px 16px; display:flex; flex-direction:column; gap:8px;">
+      <button class="btn-cyan" style="width:100%;" [disabled]="launching() || selectedIds().size === 0" (click)="launchUpdate()">
+        {{ launching() ? 'Exécution Ansible en cours...' : 'Lancer la mise à jour' }}
+      </button>
+      <button class="btn-amber" style="width:100%;" [disabled]="launching() || selectedIds().size === 0" (click)="launchRollback()">
+        {{ launching() ? 'Rollback en cours...' : '↺ Rollback manuel' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Résultat de l'exécution</h3></div>
+    <div style="padding:16px 18px;">
+      <div *ngIf="results().length === 0 && !launching()" style="color:var(--muted);font-size:13px;">
+        Aucune mise à jour lancée. Sélectionnez des serveurs et une version.
+      </div>
+      <div *ngFor="let r of results()" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span class="mono" style="font-size:13px;">{{ r.hostname }}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn-mini" style="border-color:var(--amber);color:var(--amber);cursor:pointer;"
+                    *ngIf="getServerIdByHostname(r.hostname)"
+                    [disabled]="launching()"
+                    (click)="launchRollback(getServerIdByHostname(r.hostname))">
+              ↺ Rollback
+            </button>
+            <app-status-badge [status]="r.status" [label]="r.status"></app-status-badge>
+          </div>
+        </div>
+        <pre class="mono" style="background:var(--panel-2);padding:12px;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:300px;overflow-y:auto;">{{ r.logs }}</pre>
+      </div>
+    </div>
+  </div>
+</div>

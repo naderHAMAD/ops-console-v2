@@ -1,0 +1,27 @@
+---
+- name: Test réel de création VM (local, sans hyperviseur)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Créer un dossier représentant la VM
+      ansible.builtin.file:
+        path: "/tmp/vm-{{ vm_name }}"
+        state: directory
+
+    - name: Écrire les caractéristiques de la VM (preuve d'exécution)
+      ansible.builtin.copy:
+        dest: "/tmp/vm-{{ vm_name }}/info.txt"
+        content: |
+          VM créée le {{ ansible_date_time.iso8601 | default('N/A') }}
+          Nom: {{ vm_name }}
+          CPU: {{ cpu }}
+          RAM: {{ ram_gb }} Go
+          Disque: {{ disk_gb }} Go ({{ disk_type }})
+          Réseau: {{ network }}
+          Environnement: {{ environment }}
+
+    - name: Afficher confirmation
+      ansible.builtin.debug:
+        msg: "VM {{ vm_name }} créée avec succès dans /tmp/vm-{{ vm_name }}/"

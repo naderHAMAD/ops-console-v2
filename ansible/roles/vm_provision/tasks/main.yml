@@ -1,0 +1,61 @@
+---
+# Rôle vm_provision — exécuté localement (delegate_to: localhost) car il pilote
+# l'API de l'hyperviseur plutôt que la VM elle-même (qui n'existe pas encore).
+#
+# Cet exemple cible Proxmox VE (module community.general.proxmox_kvm).
+# Pour VMware  : remplacer par community.vmware.vmware_guest
+# Pour oVirt/RHV : remplacer par ovirt.ovirt.ovirt_vm
+
+- name: Vérifier que le template demandé est connu
+  ansible.builtin.assert:
+    that: vm_template in proxmox_template_map
+    fail_msg: "Template inconnu: {{ vm_template }}. Templates disponibles: {{ proxmox_template_map.keys() | list }}"
+
+- name: Cloner la VM depuis le template Proxmox
+  community.general.proxmox_kvm:
+    api_host: "{{ vault_proxmox_api_host }}"
+    api_user: "{{ vault_proxmox_api_user }}"
+    api_password: "{{ vault_proxmox_api_password }}"
+    node: "{{ proxmox_target_node }}"
+    clone: "{{ proxmox_template_map[vm_template] }}"
+    name: "{{ vm_name }}"
+    newid: "{{ 9100 + (999999 | random(seed=vm_name)) % 800 }}"
+    full: true
+    storage: "{{ proxmox_storage }}"
+    timeout: 300
+  register: clone_result
+
+- name: Ajuster les ressources (CPU / RAM / disque) de la VM créée
+  community.general.proxmox_kvm:
+    api_host: "{{ vault_proxmox_api_host }}"
+    api_user: "{{ vault_proxmox_api_user }}"
+    api_password: "{{ vault_proxmox_api_password }}"
+    node: "{{ proxmox_target_node }}"
+    vmid: "{{ clone_result.vmid }}"
+    cores: "{{ vm_cpu }}"
+    memory: "{{ vm_ram_mb }}"
+    update: true
+
+- name: Redimensionner le disque principal si nécessaire
+  community.general.proxmox_disk:
+    api_host: "{{ vault_proxmox_api_host }}"
+    api_user: "{{ vault_proxmox_api_user }}"
+    api_password: "{{ vault_proxmox_api_password }}"
+    node: "{{ proxmox_target_node }}"
+    vmid: "{{ clone_result.vmid }}"
+    disk: scsi0
+    size: "{{ vm_disk_gb }}G"
+    state: resized
+
+- name: Démarrer la VM nouvellement créée
+  community.general.proxmox_kvm:
+    api_host: "{{ vault_proxmox_api_host }}"
+    api_user: "{{ vault_proxmox_api_user }}"
+    api_password: "{{ vault_proxmox_api_password }}"
+    node: "{{ proxmox_target_node }}"
+    vmid: "{{ clone_result.vmid }}"
+    state: started
+
+- name: Afficher un résumé du provisioning
+  ansible.builtin.debug:
+    msg: "VM {{ vm_name }} (vmid {{ clone_result.vmid }}) créée et démarrée sur {{ proxmox_target_node }}"

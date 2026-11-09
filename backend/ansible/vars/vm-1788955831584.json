@@ -1,0 +1,14 @@
+{
+  "name": "78",
+  "environment": "prod",
+  "regionId": "6127dfd5-133c-4b35-8e37-7fa0514973ee",
+  "cpu": 4,
+  "ramGb": 8,
+  "diskGb": 100,
+  "diskType": "ssd",
+  "template": "centos-stream-9",
+  "network": "78",
+  "backupEnabled": true,
+  "description": "78",
+  "region": "SUD"
+}

@@ -1,0 +1,24 @@
+---
+# Playbook déclenché par le backend via AWX (job_template "create_vm").
+# extra_vars attendues : vm_name, cpu, ram_gb, disk_gb, template
+#
+# Exécuté sur localhost car il pilote l'API de l'hyperviseur (Proxmox ici),
+# pas une machine cible qui n'existe pas encore au moment du lancement.
+
+- name: Provisioning d'une nouvelle machine virtuelle
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/vault.yml"
+
+  pre_tasks:
+    - name: Vérifier que les variables requises sont fournies
+      ansible.builtin.assert:
+        that:
+          - vm_name is defined
+          - template is defined
+        fail_msg: "vm_name et template doivent être fournis en extra_vars"
+
+  roles:
+    - vm_provision

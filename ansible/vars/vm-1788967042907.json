@@ -1,0 +1,14 @@
+{
+  "name": "33",
+  "environment": "prod",
+  "regionId": "4e546cc3-5bc4-4cfd-a777-7d7e89ac9f4a",
+  "cpu": 4,
+  "ramGb": 8,
+  "diskGb": 100,
+  "diskType": "ssd",
+  "template": "ubuntu-22.04-lts",
+  "network": "33",
+  "backupEnabled": true,
+  "description": "33",
+  "region": "NORD"
+}

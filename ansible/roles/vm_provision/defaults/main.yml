@@ -1,0 +1,15 @@
+---
+vm_cpu: "{{ cpu | default(2) }}"
+vm_ram_mb: "{{ (ram_gb | default(4)) | int * 1024 }}"
+vm_disk_gb: "{{ disk_gb | default(50) }}"
+vm_template: "{{ template | default('ubuntu-22.04-lts') }}"
+
+# Mapping simple nom de template -> ID de template Proxmox (à adapter à ton environnement)
+proxmox_template_map:
+  ubuntu-22.04-lts: 9000
+  rhel-9: 9001
+  centos-stream-9: 9002
+
+proxmox_target_node: "pve-sud-01"
+proxmox_storage: "local-lvm"
+proxmox_bridge: "vmbr0"

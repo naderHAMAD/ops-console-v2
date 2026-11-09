@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ops_console
+    username: ops_user
+    password: ${DB_PASSWORD:changeme}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway gère le schéma, pas Hibernate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:REMPLACER_PAR_UN_SECRET_LONG_ET_ALEATOIRE}
+    access-expiration-ms: 900000        # 15 min
+    refresh-expiration-ms: 604800000    # 7 jours
+  awx:
+    base-url: ${AWX_BASE_URL:http://localhost:8052}
+    token: ${AWX_TOKEN:}
+    job-template:
+      update-jboss: ${AWX_JT_UPDATE_JBOSS:1}
+      create-vm: ${AWX_JT_CREATE_VM:2}
+
+server:
+  port: 8080

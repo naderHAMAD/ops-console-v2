@@ -1,0 +1,33 @@
+<div class="region-row">
+  <div class="region-card" *ngFor="let region of regionSummaries()">
+    <div class="region-name">{{ region.name }}</div>
+    <div class="segments">
+      <div class="seg"
+           *ngFor="let s of region.servers"
+           [class.seg-ok]="s.status === 'up'"
+           [class.seg-fail]="s.status === 'down'"
+           [class.seg-warn]="s.status === 'unknown'">
+      </div>
+    </div>
+    <div class="region-meta">
+      <span>{{ region.upCount }}/{{ region.servers.length }} actifs</span>
+      <strong>{{ region.percentUp }}%</strong>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h3>Activité récente</h3></div>
+  <table>
+    <tr>
+      <th>Action</th><th>Cible</th><th>Par</th><th>Détails</th><th>Date</th>
+    </tr>
+    <tr *ngFor="let entry of recentAudit()">
+      <td>{{ entry.action }}</td>
+      <td>{{ entry.targetType }}</td>
+      <td>{{ entry.userFullName }}</td>
+      <td style="color:var(--muted);">{{ entry.details }}</td>
+      <td class="mono">{{ entry.timestamp | date:'short' }}</td>
+    </tr>
+  </table>
+</div>

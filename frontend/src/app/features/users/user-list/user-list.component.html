@@ -1,0 +1,49 @@
+<div class="panel" style="margin-bottom:20px;">
+  <div class="panel-head">
+    <h3>Utilisateurs</h3>
+    <button class="btn-cyan" (click)="toggleForm()">{{ showForm() ? 'Annuler' : '+ Ajouter utilisateur' }}</button>
+  </div>
+
+  <div *ngIf="showForm()" style="padding:18px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div>
+      <label class="field-label">Email professionnel</label>
+      <input type="text" [(ngModel)]="newUser.email" [ngModelOptions]="{standalone:true}">
+    </div>
+    <div>
+      <label class="field-label">Nom complet</label>
+      <input type="text" [(ngModel)]="newUser.fullName" [ngModelOptions]="{standalone:true}">
+    </div>
+    <div>
+      <label class="field-label">Mot de passe temporaire</label>
+      <input type="text" [(ngModel)]="newUser.temporaryPassword" [ngModelOptions]="{standalone:true}">
+    </div>
+        <div>
+      <label class="field-label">Rôle</label>
+      <select [(ngModel)]="newUser.roleId" [ngModelOptions]="{standalone:true}">
+        <option value="" disabled selected>Choisir un rôle</option>
+        <option *ngFor="let role of roles()" [value]="role.id">{{ role.name }}</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Région</label>
+      <select [(ngModel)]="newUser.regionId" [ngModelOptions]="{standalone:true}">
+        <option [value]="null">Aucune (national)</option>
+        <option *ngFor="let region of regions()" [value]="region.id">{{ region.name }}</option>
+      </select>
+    </div>
+    <div style="grid-column: span 2;">
+      <button class="btn-cyan" (click)="submitNewUser()">Créer l'utilisateur</button>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Utilisateur</th><th>Rôle</th><th>Région</th><th>Statut</th><th></th></tr>
+    <tr *ngFor="let user of users()">
+      <td>{{ user.fullName }}<br><span style="color:var(--muted);font-size:11px;">{{ user.email }}</span></td>
+      <td><span class="mono" style="font-size:12px;">{{ user.roleName }}</span></td>
+      <td>{{ user.regionName || '—' }}</td>
+      <td><app-status-badge [status]="user.isActive ? 'success' : 'failed'" [label]="user.isActive ? 'Actif' : 'Désactivé'"></app-status-badge></td>
+      <td><button class="btn-mini" (click)="toggleActive(user)">{{ user.isActive ? 'Désactiver' : 'Activer' }}</button></td>
+    </tr>
+  </table>
+</div>

@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ops_console
+    username: ops_user
+    password: ${DB_PASSWORD:changeme} 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USER:ops_user}
+    password: ${RABBITMQ_PASSWORD:changeme}
+    listener:
+      simple:
+        auto-startup: true
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway gère le schéma, pas Hibernate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-a-remplacer-en-production-1234567890}
+    access-expiration-ms: 900000        # 15 min
+    refresh-expiration-ms: 604800000    # 7 jours
+  awx:
+    base-url: ${AWX_BASE_URL:http://localhost:8052}
+    token: ${AWX_TOKEN:}
+    job-template:
+      update-jboss: ${AWX_JT_UPDATE_JBOSS:1}
+      create-vm: ${AWX_JT_CREATE_VM:2}
+  ansible:
+    project-root: 'D:\Users\73554\Downloads\ops-console-main\ops-console-main'
+
+server:
+  port: 8081

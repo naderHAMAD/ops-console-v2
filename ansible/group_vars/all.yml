@@ -1,0 +1,13 @@
+---
+# Variables communes à tous les environnements.
+# Les secrets (mots de passe, tokens) vivent dans group_vars/vault.yml, chiffré avec ansible-vault.
+
+jboss_service_name: jboss-eap
+jboss_management_port: 9990
+jboss_health_endpoint: "http://localhost:{{ jboss_management_port }}/health"
+
+backup_root: /opt/backups/jboss
+artifact_repository_url: "http://host.docker.internal:8889"
+
+health_check_retries: 6
+health_check_delay: 10

@@ -1,0 +1,85 @@
+---
+# Playbook de Rollback manuel JBoss
+# Restaure la dernière sauvegarde disponible pour le serveur cible.
+
+- name: Rollback manuel JBoss vers la dernière sauvegarde
+  hosts: "{{ target_hostname | default('all') }}"
+  become: true
+  gather_facts: true
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all.yml"
+    - "{{ playbook_dir }}/../group_vars/vault.yml"
+
+  pre_tasks:
+    - name: Vérifier que target_hostname est fourni
+      ansible.builtin.assert:
+        that:
+          - target_hostname is defined
+        fail_msg: "target_hostname doit être fourni en extra_vars"
+
+  tasks:
+    - name: Trouver la sauvegarde la plus récente
+      ansible.builtin.shell: "ls -t {{ backup_root }}/{{ inventory_hostname }}/backup-*.tar.gz 2>/dev/null | head -n 1"
+      register: latest_backup
+      changed_when: false
+
+    - name: Vérifier qu'une sauvegarde existe
+      ansible.builtin.assert:
+        that:
+          - latest_backup.stdout is defined
+          - latest_backup.stdout | length > 0
+        fail_msg: "Aucune sauvegarde trouvée dans {{ backup_root }}/{{ inventory_hostname }}/"
+
+    - name: Afficher la sauvegarde sélectionnée
+      ansible.builtin.debug:
+        msg: "Restauration de la sauvegarde : {{ latest_backup.stdout }}"
+
+    - name: Arrêter le service JBoss
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: stopped
+      failed_when: false
+
+    - name: Vider le dossier jboss_home avant restauration
+      ansible.builtin.file:
+        path: "{{ jboss_home }}"
+        state: absent
+
+    - name: Recréer le dossier jboss_home
+      ansible.builtin.file:
+        path: "{{ jboss_home }}"
+        state: directory
+        owner: "{{ jboss_instance_user }}"
+
+    - name: Restaurer la sauvegarde précédente
+      ansible.builtin.unarchive:
+        src: "{{ latest_backup.stdout }}"
+        dest: "{{ jboss_home }}"
+        remote_src: true
+        owner: "{{ jboss_instance_user }}"
+        extra_opts: [--strip-components=1]
+
+    - name: Redémarrer le service JBoss avec la version restaurée
+      ansible.builtin.systemd:
+        name: "{{ jboss_service_name }}"
+        state: started
+
+    - name: Vérifier que le service JBoss répond après le rollback
+      ansible.builtin.uri:
+        url: "{{ jboss_health_endpoint }}"
+        status_code: 200
+        timeout: 5
+      register: rollback_health
+      retries: "{{ health_check_retries }}"
+      delay: "{{ health_check_delay }}"
+      until: rollback_health.status == 200
+
+    - name: Relever la version JBoss restaurée
+      ansible.builtin.command: "cat {{ jboss_home }}/version.txt"
+      register: restored_version
+      changed_when: false
+      failed_when: false
+
+    - name: Confirmation du rollback manuel
+      ansible.builtin.debug:
+        msg: "Rollback manuel terminé avec succès sur {{ inventory_hostname }}. Version active restaurée : {{ restored_version.stdout | default('inconnue') | trim }}"

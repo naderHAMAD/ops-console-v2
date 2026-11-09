@@ -1,0 +1,34 @@
+<div class="app">
+  <div class="sidebar">
+    <div class="side-brand">
+      <div class="brand-dot"></div>
+      <div class="brand-name" style="font-size:13px;">OPS CONSOLE</div>
+    </div>
+    <a class="side-link" routerLink="/dashboard" routerLinkActive="active">
+      <div class="side-icon"></div>Dashboard
+    </a>
+    <a class="side-link" routerLink="/jboss-update" routerLinkActive="active">
+      <div class="side-icon"></div>Mises à jour JBoss
+    </a>
+    <a class="side-link" routerLink="/vm" routerLinkActive="active">
+      <div class="side-icon"></div>Machines virtuelles
+    </a>
+    <a class="side-link" routerLink="/users" routerLinkActive="active">
+      <div class="side-icon"></div>Utilisateurs
+    </a>
+  </div>
+
+  <div>
+    <div class="topbar">
+      <div><h2 class="topbar-title">Ops Console</h2><div class="topbar-sub">STEG Data Centre</div></div>
+      <div class="user-chip">
+        <div class="avatar">{{ initials() }}</div>
+        {{ auth.currentUser()?.fullName }} · {{ auth.role() }}
+        <button class="btn-mini" (click)="logout()">Déconnexion</button>
+      </div>
+    </div>
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>
